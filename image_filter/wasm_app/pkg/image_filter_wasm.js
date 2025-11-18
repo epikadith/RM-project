@@ -9,7 +9,65 @@ function getUint8ArrayMemory0() {
     return cachedUint8ArrayMemory0;
 }
 
+let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+
+cachedTextDecoder.decode();
+
+const MAX_SAFARI_DECODE_BYTES = 2146435072;
+let numBytesDecoded = 0;
+function decodeText(ptr, len) {
+    numBytesDecoded += len;
+    if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
+        cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+        cachedTextDecoder.decode();
+        numBytesDecoded = len;
+    }
+    return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+
+function getStringFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return decodeText(ptr, len);
+}
+
+let cachedFloat64ArrayMemory0 = null;
+
+function getFloat64ArrayMemory0() {
+    if (cachedFloat64ArrayMemory0 === null || cachedFloat64ArrayMemory0.byteLength === 0) {
+        cachedFloat64ArrayMemory0 = new Float64Array(wasm.memory.buffer);
+    }
+    return cachedFloat64ArrayMemory0;
+}
+
 let WASM_VECTOR_LEN = 0;
+
+function passArrayF64ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 8, 8) >>> 0;
+    getFloat64ArrayMemory0().set(arg, ptr / 8);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
+function getArrayF64FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+/**
+ * @param {Float64Array} data_a
+ * @param {Float64Array} data_b
+ * @param {number} n
+ * @returns {Float64Array}
+ */
+export function multiply_matrices_dynamic(data_a, data_b, n) {
+    const ptr0 = passArrayF64ToWasm0(data_a, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayF64ToWasm0(data_b, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.multiply_matrices_dynamic(ptr0, len0, ptr1, len1, n);
+    var v3 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v3;
+}
 
 function passArray8ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 1, 1) >>> 0;
@@ -23,145 +81,73 @@ function getArrayU8FromWasm0(ptr, len) {
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 /**
- * @param {Uint8Array} pixels
+ * @param {Uint8Array} data
  * @returns {Uint8Array}
  */
-export function grayscale(pixels) {
-    const ptr0 = passArray8ToWasm0(pixels, wasm.__wbindgen_malloc);
+export function grayscale_image(data) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.grayscale(ptr0, len0);
+    const ret = wasm.grayscale_image(ptr0, len0);
     var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v2;
 }
 
-/**
- * Mandelbrot Set Calculation
- * @param {number} width
- * @param {number} height
- * @param {number} max_iterations
- * @returns {Uint8Array}
- */
-export function mandelbrot_wasm(width, height, max_iterations) {
-    const ret = wasm.mandelbrot_wasm(width, height, max_iterations);
-    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v1;
-}
+let cachedUint32ArrayMemory0 = null;
 
-let cachedFloat32ArrayMemory0 = null;
-
-function getFloat32ArrayMemory0() {
-    if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0) {
-        cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
+function getUint32ArrayMemory0() {
+    if (cachedUint32ArrayMemory0 === null || cachedUint32ArrayMemory0.byteLength === 0) {
+        cachedUint32ArrayMemory0 = new Uint32Array(wasm.memory.buffer);
     }
-    return cachedFloat32ArrayMemory0;
+    return cachedUint32ArrayMemory0;
 }
 
-function getArrayF32FromWasm0(ptr, len) {
+function passArray32ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 4, 4) >>> 0;
+    getUint32ArrayMemory0().set(arg, ptr / 4);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
+let cachedInt32ArrayMemory0 = null;
+
+function getInt32ArrayMemory0() {
+    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
+        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32ArrayMemory0;
+}
+
+function getArrayI32FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
-    return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
 }
 /**
- * Matrix Multiplication
- * @param {number} size
- * @returns {Float32Array}
+ * @param {Int32Array} data
+ * @returns {Int32Array}
  */
-export function matrix_multiplication_wasm(size) {
-    const ret = wasm.matrix_multiplication_wasm(size);
-    var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v1;
-}
-
-/**
- * FFT Simulation - Complex number operations
- * @param {number} size
- * @returns {Float32Array}
- */
-export function fft_simulation_wasm(size) {
-    const ret = wasm.fft_simulation_wasm(size);
-    var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v1;
-}
-
-/**
- * Array Iteration and Arithmetic
- * @param {number} size
- * @returns {number}
- */
-export function array_iteration_wasm(size) {
-    const ret = wasm.array_iteration_wasm(size);
-    return ret;
-}
-
-/**
- * Memory Operations
- * @param {number} size
- * @returns {number}
- */
-export function memory_operations_wasm(size) {
-    const ret = wasm.memory_operations_wasm(size);
-    return ret >>> 0;
-}
-
-/**
- * Vector Operations - SIMD friendly
- * @param {number} size
- * @returns {number}
- */
-export function vector_operations_wasm(size) {
-    const ret = wasm.vector_operations_wasm(size);
-    return ret;
-}
-
-/**
- * Prime Number Generation - Sieve of Eratosthenes
- * @param {number} limit
- * @returns {Uint8Array}
- */
-export function prime_generation_wasm(limit) {
-    const ret = wasm.prime_generation_wasm(limit);
-    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v1;
-}
-
-/**
- * Gaussian Blur
- * @param {number} width
- * @param {number} height
- * @param {Uint8Array} image_data
- * @returns {Uint8Array}
- */
-export function gaussian_blur_wasm(width, height, image_data) {
-    const ptr0 = passArray8ToWasm0(image_data, wasm.__wbindgen_malloc);
+export function sort_array(data) {
+    const ptr0 = passArray32ToWasm0(data, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.gaussian_blur_wasm(width, height, ptr0, len0);
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    const ret = wasm.sort_array(ptr0, len0);
+    var v2 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     return v2;
 }
 
 /**
- * Recursive Fibonacci (memoized simulation via iteration)
- * @param {number} n
- * @returns {bigint}
- */
-export function fibonacci_wasm(n) {
-    const ret = wasm.fibonacci_wasm(n);
-    return BigInt.asUintN(64, ret);
-}
-
-/**
- * String-like processing with sorting
+ * @param {Float64Array} points
+ * @param {number} k
  * @param {number} iterations
- * @returns {number}
+ * @returns {Float64Array}
  */
-export function data_processing_wasm(iterations) {
-    const ret = wasm.data_processing_wasm(iterations);
-    return ret >>> 0;
+export function k_means_clustering(points, k, iterations) {
+    const ptr0 = passArrayF64ToWasm0(points, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.k_means_clustering(ptr0, len0, k, iterations);
+    var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v2;
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
@@ -202,6 +188,9 @@ async function __wbg_load(module, imports) {
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
+    imports.wbg.__wbg___wbindgen_throw_b855445ff6a94295 = function(arg0, arg1) {
+        throw new Error(getStringFromWasm0(arg0, arg1));
+    };
     imports.wbg.__wbindgen_init_externref_table = function() {
         const table = wasm.__wbindgen_externrefs;
         const offset = table.grow(4);
@@ -219,7 +208,9 @@ function __wbg_get_imports() {
 function __wbg_finalize_init(instance, module) {
     wasm = instance.exports;
     __wbg_init.__wbindgen_wasm_module = module;
-    cachedFloat32ArrayMemory0 = null;
+    cachedFloat64ArrayMemory0 = null;
+    cachedInt32ArrayMemory0 = null;
+    cachedUint32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
 
 
