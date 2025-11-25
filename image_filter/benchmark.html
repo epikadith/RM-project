@@ -3,399 +3,350 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wasm Research Dashboard</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>Rigorous Wasm Benchmark</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <style>
+        /* --- THEMES --- */
         :root {
-            --primary: #2563eb; /* Academic Blue */
+            /* Mohit Mode (Light) */
+            --primary: #2563eb;
             --primary-hover: #1d4ed8;
             --bg-body: #f3f4f6;
             --bg-card: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
+            --text: #1f2937;
+            --text-sec: #6b7280;
             --border: #e5e7eb;
-            --success: #10b981; /* Wasm Color */
-            --danger: #ef4444; /* JS Color */
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --input-bg: #ffffff;
+            --table-stripe: #f9fafb;
+            --success-bg: #d1fae5;
+            --success-text: #065f46;
+            --danger-bg: #fee2e2;
+            --danger-text: #991b1b;
         }
 
-        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; min-height: 100vh; }
-        
-        /* Navbar */
-        .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.25rem; color: var(--text-main); }
-        .brand i { color: var(--primary); }
-        .sys-badges { display: flex; gap: 10px; }
-        .sys-badge { background: #eff6ff; color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid #dbeafe; }
+        [data-theme="davan"] {
+            /* Davan Mode (Dark) */
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --bg-body: #111827;
+            --bg-card: #1f2937;
+            --text: #f3f4f6;
+            --text-sec: #9ca3af;
+            --border: #374151;
+            --input-bg: #374151;
+            --table-stripe: #2d3748;
+            --success-bg: #064e3b;
+            --success-text: #6ee7b7;
+            --danger-bg: #7f1d1d;
+            --danger-text: #fca5a5;
+        }
 
-        /* Layout Grid */
-        .main-container { max-width: 1400px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 300px 1fr; gap: 2rem; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text); margin: 0; padding: 20px; transition: background 0.3s, color 0.3s; }
         
-        /* Cards */
-        .card { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow); padding: 1.5rem; border: 1px solid var(--border); }
-        .card-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-
-        /* Config Panel */
-        .config-group { margin-bottom: 1.25rem; }
-        .config-group label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.5rem; }
-        .config-group select, .config-group input { width: 100%; padding: 0.625rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.9rem; background: #f9fafb; transition: border-color 0.2s; box-sizing: border-box;}
-        .config-group select:focus, .config-group input:focus { outline: none; border-color: var(--primary); ring: 2px solid #bfdbfe; }
-
-        /* Buttons */
-        .btn-stack { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
-        .btn { width: 100%; padding: 0.75rem; border: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; transform: none; }
+        .container { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+        .card { background: var(--bg-card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); transition: background 0.3s; }
         
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-outline:hover { background: #f3f4f6; border-color: #d1d5db; }
+        h1, h2, h3 { margin: 0 0 15px 0; color: var(--text); }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .badge { display: inline-block; padding: 4px 10px; background: var(--border); color: var(--text); border-radius: 20px; font-size: 0.8em; font-weight: 600; }
+        
+        label { display: block; font-size: 0.85em; font-weight: 600; margin-bottom: 5px; color: var(--text-sec); }
+        input, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; background: var(--input-bg); color: var(--text); }
+        
+        .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: #ffffff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { background: var(--border); cursor: not-allowed; color: var(--text-sec); }
+        .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-sec:hover { background: var(--border); }
         
         .file-upload { position: relative; overflow: hidden; }
         .file-upload input { position: absolute; font-size: 100px; right: 0; top: 0; opacity: 0; cursor: pointer; }
 
-        /* Charts */
-        .charts-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-        .chart-container { height: 300px; position: relative; }
-
-        /* Data Table */
+        /* Table */
         .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th { text-align: left; padding: 1rem; background: #f9fafb; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
-        td { padding: 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover { background: #f9fafb; }
-
-        /* Status Tags */
-        .tag { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
-        .tag-wasm { background: #ecfdf5; color: var(--success); border: 1px solid #a7f3d0; }
-        .tag-js { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
-        .tag-param { background: #f3f4f6; color: var(--text-muted); font-family: monospace; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        th { text-align: left; padding: 12px; background: var(--border); color: var(--text); font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:nth-child(even) { background: var(--table-stripe); }
         
-        .memory-val { font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 4px; }
+        .metric-val { font-family: 'Courier New', monospace; font-weight: 600; }
+        .stat-detail { font-size: 0.8em; color: var(--text-sec); }
+        .warn { color: #f59e0b; font-weight: bold; }
+        .speedup-badge { padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+        .speedup-good { background: var(--success-bg); color: var(--success-text); }
+        .speedup-bad { background: var(--danger-bg); color: var(--danger-text); }
 
-        /* Loading Overlay */
-        #status-overlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(255, 255, 255, 0.8); z-index: 1000; 
-            justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(2px);
-        }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Info Box */
-        .info-box { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; padding: 1rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.5; display: flex; gap: 10px; align-items: start; }
-
+        #overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; flex-direction: column; color: white; backdrop-filter: blur(5px); }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        #themeBtn { margin-left: auto; width: auto; padding: 6px 12px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="brand">
-            <i class="fa-solid fa-microchip"></i>
-            <span>Wasm<span style="font-weight:400">Bench</span> Research</span>
-        </div>
-        <div class="sys-badges">
-            <div class="sys-badge"><i class="fa-brands fa-windows"></i> <span id="sys-os">Detecting...</span></div>
-            <div class="sys-badge"><i class="fa-brands fa-chrome"></i> <span id="sys-browser">Detecting...</span></div>
-        </div>
-    </nav>
-
-    <div class="main-container">
-        
-        <aside>
-            <div class="card">
-                <div class="card-header">
-                    Benchmark Config
-                    <i class="fa-solid fa-sliders" style="color: var(--text-muted)"></i>
-                </div>
-                
-                <div class="config-group">
-                    <label>Matrix Size (N)</label>
-                    <input type="number" id="inp-matrix" value="400" step="100">
-                </div>
-                
-                <div class="config-group">
-                    <label>Image Resolution</label>
-                    <select id="inp-image">
-                        <option value="3840,2160">4K (3840x2160)</option>
-                        <option value="1920,1080">1080p (1920x1080)</option>
-                        <option value="1280,720">720p (1280x720)</option>
-                        <option value="5000,5000">5K (Stress Test)</option>
-                    </select>
-                </div>
-
-                <div class="config-group">
-                    <label>Sort Array Size</label>
-                    <input type="number" id="inp-sort" value="1000000" step="500000">
-                </div>
-
-                <div class="config-group">
-                    <label>K-Means Points</label>
-                    <input type="number" id="inp-kmeans" value="50000" step="10000">
-                </div>
-
-                <div class="btn-stack">
-                    <button id="runBtn" class="btn btn-primary" onclick="runNewTests()">
-                        <i class="fa-solid fa-play"></i> Run Benchmarks
-                    </button>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <button class="btn btn-outline" onclick="downloadMasterCSV()">
-                            <i class="fa-solid fa-download"></i> Export
-                        </button>
-                        <button class="btn btn-outline file-upload">
-                            <i class="fa-solid fa-upload"></i> Import
-                            <input type="file" accept=".csv" onchange="importCSV(this)">
-                        </button>
-                    </div>
-                    <button class="btn btn-outline" onclick="clearHistory()" style="color: var(--danger); border-color: #fee2e2;">
-                        <i class="fa-solid fa-trash"></i> Reset Data
-                    </button>
-                </div>
+    <div class="container">
+        <aside class="card">
+            <h2>⚙️ Config</h2>
+            <div style="margin-bottom: 20px; padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; font-size: 0.85em; color: var(--text);">
+                <b>Scientific Rigor Mode:</b><br>
+                • Warmup: 5 runs (Discarded)<br>
+                • Sampling: 20 Iterations<br>
+                • Metric: Mean ± StdDev
             </div>
+
+            <label>Matrix Size (N)</label>
+            <input type="number" id="inp-matrix" value="400">
+            
+            <label>Image Resolution</label>
+            <select id="inp-image">
+                <option value="3840,2160">4K (3840x2160)</option>
+                <option value="1920,1080">1080p</option>
+                <option value="5000,5000">5K (Stress)</option>
+            </select>
+
+            <label>Sort Array Size</label>
+            <input type="number" id="inp-sort" value="1000000">
+
+            <label>K-Means Points</label>
+            <input type="number" id="inp-kmeans" value="50000">
+
+            <button id="runBtn" class="btn btn-primary" onclick="runRigorousSuite()">
+                <i class="fa-solid fa-vial"></i> Run Rigorous Test
+            </button>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="btn btn-sec" onclick="downloadCSV()">
+                    <i class="fa-solid fa-download"></i> Export
+                </button>
+                <button class="btn btn-sec file-upload">
+                    <i class="fa-solid fa-upload"></i> Import
+                    <input type="file" accept=".csv" onchange="importCSV(this)">
+                </button>
+            </div>
+            
+            <button class="btn btn-sec" onclick="clearData()" style="color: #ef4444; border-color: #fca5a5;">
+                <i class="fa-solid fa-trash"></i> Reset Data
+            </button>
         </aside>
 
         <main>
-            
-            <div class="info-box">
-                <i class="fa-solid fa-circle-info" style="margin-top: 3px;"></i>
+            <div class="card header-row">
                 <div>
-                    <strong>Research Note:</strong> WebAssembly uses Linear Memory. If you see memory stay static (e.g. 68.2MB), it is due to the "High-Water Mark" behavior (the browser reserves the peak capacity needed and does not shrink it). Use the 5K Image setting to force new allocation.
+                    <h1>📊 Research Dashboard</h1>
+                    <div style="color: var(--text-sec); font-size: 0.9em;">
+                        Environment: <span id="sys-os" class="badge">Detecting...</span> 
+                        <span id="sys-browser" class="badge">Detecting...</span>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+                    <button id="themeBtn" class="btn btn-sec" onclick="toggleTheme()">
+                        <i class="fa-solid fa-sun"></i> Mohit Mode
+                    </button>
+                    <div style="font-size: 0.85em; color: var(--text-sec);">
+                        Samples: <span id="total-samples">0</span> | Last Run: <span id="last-run">-</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="charts-wrapper">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                 <div class="card">
-                    <div class="card-header">Execution Time (Log Scale)</div>
-                    <div class="chart-container"><canvas id="timeChart"></canvas></div>
+                    <h3>Execution Time (Mean)</h3>
+                    <div style="height: 250px;"><canvas id="timeChart"></canvas></div>
                 </div>
                 <div class="card">
-                    <div class="card-header">Speedup Factor (Wasm vs JS)</div>
-                    <div class="chart-container"><canvas id="speedupChart"></canvas></div>
+                    <h3>Speedup (Wasm vs JS)</h3>
+                    <div style="height: 250px;"><canvas id="speedupChart"></canvas></div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    <div>Historical Data Record</div>
-                    <div class="tag tag-param" id="record-count" style="font-size: 0.8rem;">0 Records</div>
-                </div>
+                <h3>Statistical Data</h3>
                 <div class="table-container">
-                    <table id="history-table">
+                    <table id="dataTable">
                         <thead>
                             <tr>
-                                <th>Env</th>
                                 <th>Test Case</th>
-                                <th>JS Time</th>
-                                <th>Wasm Time</th>
+                                <th>JS Mean (σ)</th>
+                                <th>Wasm Mean (σ)</th>
                                 <th>Speedup</th>
-                                <th>Memory (JS / Wasm)</th>
+                                <th>Peak Memory</th>
+                                <th>Stability</th>
                             </tr>
                         </thead>
-                        <tbody id="table-body">
-                            </tbody>
+                        <tbody id="tableBody"></tbody>
                     </table>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="status-overlay">
+    <div id="overlay">
         <div class="spinner"></div>
-        <h3 id="status-text">Initializing Wasm Module...</h3>
-        <p style="color: #666">Running rigorous benchmark suite...</p>
+        <h2 style="margin-top: 20px;">Running Benchmarks...</h2>
+        <p id="status-text">Warming up JIT...</p>
+        <div id="progress-bar" style="width: 300px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin-top: 10px; overflow: hidden;">
+            <div id="progress-fill" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;"></div>
+        </div>
     </div>
 
     <script src="./benchmarks/js/benchmarks.js"></script>
-    <script src="./cpp_app/cpp_benchmark.js" onerror="console.log('C++ module skipped')"></script>
+    <script src="./cpp_app/cpp_benchmark.js" onerror="console.log('C++ skipped')"></script>
 
     <script type="module">
-        // ==========================================
-        // 1. SETUP & STATE
-        // ==========================================
-        let history = JSON.parse(localStorage.getItem('research_benchmark_data')) || [];
-        let rustWrappers = null; 
-        let rustExports = null;
-        let cppModule = null;
+        // --- CONFIGURATION ---
+        const WARMUP_ROUNDS = 5;
+        const MEASURE_ROUNDS = 20;
+        
+        let history = JSON.parse(localStorage.getItem('research_stats_data')) || [];
+        let rustWrappers = null, rustExports = null, cppModule = null;
+        let charts = {};
 
-        // Chart Colors
-        const COLOR_JS = '#ef4444';
-        const COLOR_WASM = '#10b981';
-        const COLOR_PRIMARY = '#2563eb';
-
+        // Init
+        initTheme();
         detectSystem();
         updateUI();
 
-        // ==========================================
-        // 2. UTILITIES (System & Memory)
-        // ==========================================
+        // --- THEME LOGIC ---
+        window.toggleTheme = function() {
+            const body = document.body;
+            const btn = document.getElementById('themeBtn');
+            if (body.getAttribute('data-theme') === 'davan') {
+                body.removeAttribute('data-theme');
+                btn.innerHTML = '<i class="fa-solid fa-sun"></i> Mohit Mode';
+                localStorage.setItem('theme', 'mohit');
+            } else {
+                body.setAttribute('data-theme', 'davan');
+                btn.innerHTML = '<i class="fa-solid fa-moon"></i> Davan Mode';
+                localStorage.setItem('theme', 'davan');
+            }
+            updateCharts();
+        };
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || 'mohit';
+            if (saved === 'davan') {
+                document.body.setAttribute('data-theme', 'davan');
+                document.getElementById('themeBtn').innerHTML = '<i class="fa-solid fa-moon"></i> Davan Mode';
+            }
+        }
+
+        // --- SYSTEM DETECTION ---
         function detectSystem() {
             const ua = navigator.userAgent;
-            let os = "Unknown";
-            if (ua.includes("Win")) os = "Windows";
-            else if (ua.includes("Mac")) os = "macOS";
-            else if (ua.includes("Linux")) os = "Linux";
-            else if (ua.includes("Android")) os = "Android";
-            else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
-
-            let browser = "Unknown";
-            let icon = "fa-globe";
-            if (ua.indexOf("Edg") !== -1) { browser = "Edge"; icon = "fa-edge"; }
-            else if (ua.indexOf("Chrome") !== -1) { browser = "Chrome"; icon = "fa-chrome"; }
-            else if (ua.indexOf("Firefox") !== -1) { browser = "Firefox"; icon = "fa-firefox"; }
-            else if (ua.indexOf("Safari") !== -1) { browser = "Safari"; icon = "fa-safari"; }
-
-            document.getElementById('sys-os').innerHTML = os;
-            document.getElementById('sys-browser').innerHTML = browser;
-            
-            const bIcon = document.querySelector('.sys-badge .fa-chrome'); 
-            if(bIcon) bIcon.className = `fa-brands ${icon}`;
-
+            let os = ua.includes("Win") ? "Windows" : ua.includes("Mac") ? "macOS" : ua.includes("Linux") ? "Linux" : "Unknown";
+            let browser = ua.includes("Edg") ? "Edge" : ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Unknown";
+            document.getElementById('sys-os').innerText = os;
+            document.getElementById('sys-browser').innerText = browser;
             return { os, browser };
         }
 
-        function getMemory(isWasm, wasmInstance) {
+        // --- MEMORY ---
+        function getMemory(isWasm) {
             if (!isWasm) {
-                if (window.performance && window.performance.memory) {
-                    return (window.performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
-                }
-                return "N/A"; 
+                return (window.performance && window.performance.memory) ? (window.performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) : "N/A";
             }
             try {
-                if (wasmInstance && wasmInstance.memory && wasmInstance.memory.buffer) {
-                    return (wasmInstance.memory.buffer.byteLength / 1024 / 1024).toFixed(1);
-                }
-                if (wasmInstance && wasmInstance.HEAP8) {
-                    return (wasmInstance.HEAP8.buffer.byteLength / 1024 / 1024).toFixed(1);
-                }
-            } catch(e) { console.error("Mem check failed", e); }
+                if (rustExports && rustExports.memory) return (rustExports.memory.buffer.byteLength / 1024 / 1024).toFixed(1);
+            } catch(e) {}
             return "-";
         }
 
-        function setStatus(msg, show=true) {
-            const el = document.getElementById('status-overlay');
-            const text = document.getElementById('status-text');
-            el.style.display = show ? 'flex' : 'none';
-            if(msg) text.innerText = msg;
+        // --- STATS ---
+        function calculateStats(times) {
+            const n = times.length;
+            const mean = times.reduce((a, b) => a + b, 0) / n;
+            const variance = times.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+            const stdDev = Math.sqrt(variance);
+            const rsd = (stdDev / mean) * 100; 
+            return { mean, stdDev, rsd, min: Math.min(...times), max: Math.max(...times) };
         }
 
-        // ==========================================
-        // 3. INITIALIZATION
-        // ==========================================
+        // --- RUNNER ---
         async function initModules() {
             if (!rustWrappers) {
                 const m = await import('./wasm_app/pkg/image_filter_wasm.js');
                 rustWrappers = m;
-                rustExports = await m.default(); 
-            }
-            if (!cppModule && window.createCppModule) {
-                try { cppModule = await window.createCppModule(); } catch(e) {}
+                rustExports = await m.default();
             }
         }
 
-        // ==========================================
-        // 4. RUNNER LOGIC (Strictly Fair Inputs)
-        // ==========================================
-        window.runNewTests = async function() {
-            setStatus("Initializing Engines...", true);
+        window.runRigorousSuite = async function() {
+            const overlay = document.getElementById('overlay');
+            const status = document.getElementById('status-text');
+            const prog = document.getElementById('progress-fill');
+            overlay.style.display = 'flex';
             
-            setTimeout(async () => {
-                try {
-                    await initModules();
-                    const sys = detectSystem();
-                    const conf = {
-                        matrix: parseInt(document.getElementById('inp-matrix').value),
-                        img: document.getElementById('inp-image').value.split(','),
-                        sort: parseInt(document.getElementById('inp-sort').value),
-                        kmeans: parseInt(document.getElementById('inp-kmeans').value)
-                    };
+            try {
+                await initModules();
+                const sys = detectSystem();
+                
+                const conf = {
+                    matrix: parseInt(document.getElementById('inp-matrix').value),
+                    img: document.getElementById('inp-image').value.split(','),
+                    sort: parseInt(document.getElementById('inp-sort').value),
+                    kmeans: parseInt(document.getElementById('inp-kmeans').value)
+                };
 
-                    // Helper to run one test with explicit pre-generated inputs
-                    const runTest = async (name, params, jsFn, wasmFn) => {
-                        setStatus(`Running ${name}...`);
-                        
-                        // JS Run
-                        let t0 = performance.now();
-                        await jsFn(); 
-                        let tJS = performance.now() - t0;
-                        let mJS = getMemory(false);
+                status.innerText = "Generating Data...";
+                const matA = window.generateMatrix(conf.matrix);
+                const matB = window.generateMatrix(conf.matrix);
+                const imgData = await window.fetchRealImage(parseInt(conf.img[0]), parseInt(conf.img[1]));
+                const sortData = window.generateRandomArray(conf.sort);
+                const kmeansPts = window.generatePoints(conf.kmeans);
 
-                        // Wasm Run
-                        t0 = performance.now();
-                        await wasmFn();
-                        let tWasm = performance.now() - t0;
-                        let mWasm = getMemory(true, rustExports);
-                        
-                        const safeWasm = tWasm === 0 ? 0.01 : tWasm;
-                        const speedup = parseFloat((tJS / safeWasm).toFixed(2));
+                const tests = [
+                    { name: `Matrix (N=${conf.matrix})`, js: () => window.jsMultiplyMatrix(matA, matB, conf.matrix), wasm: () => rustWrappers.multiply_matrices_dynamic(matA, matB, conf.matrix) },
+                    { name: `Image (${conf.img[0]}x${conf.img[1]})`, js: () => window.jsGrayscale(imgData.data), wasm: () => rustWrappers.grayscale_image(imgData.data) },
+                    { name: `Sort (${(conf.sort/1e6).toFixed(1)}M)`, js: () => window.jsMergeSort(new Int32Array(sortData)), wasm: () => rustWrappers.sort_array(new Int32Array(sortData)) },
+                    { name: `K-Means (P=${conf.kmeans})`, js: () => window.jsKMeans(kmeansPts, 5, 20), wasm: () => rustWrappers.k_means_clustering(kmeansPts, 5, 20) }
+                ];
 
-                        history.push({
-                            timestamp: new Date().toISOString(), platform: sys.os, browser: sys.browser,
-                            test: name, params: params, js_time: parseFloat(tJS.toFixed(2)),
-                            wasm_time: parseFloat(tWasm.toFixed(2)), speedup: speedup, js_mem: mJS, wasm_mem: mWasm
-                        });
-                        saveHistory();
-                    };
+                const totalSteps = tests.length * (WARMUP_ROUNDS + MEASURE_ROUNDS) * 2; 
+                let step = 0;
 
-                    // 1. MATRIX
-                    // Generate inputs ONCE
-                    setStatus("Generating Matrix Data...");
-                    const mA = window.generateMatrix(conf.matrix);
-                    const mB = window.generateMatrix(conf.matrix);
-                    await runTest('Matrix', `N=${conf.matrix}`, 
-                        () => window.jsMultiplyMatrix(mA, mB, conf.matrix), 
-                        () => rustWrappers.multiply_matrices_dynamic(mA, mB, conf.matrix));
+                for (const test of tests) {
+                    const result = { test: test.name, platform: sys.os, browser: sys.browser, timestamp: new Date().toISOString(), js_samples: [], wasm_samples: [] };
 
-                    // 2. IMAGE
-                    // Fetch ONCE
-                    setStatus("Downloading Image...");
-                    const imgData = await window.fetchRealImage(parseInt(conf.img[0]), parseInt(conf.img[1]));
-                    await runTest('Image', `${conf.img[0]}x${conf.img[1]}`, 
-                        () => window.jsGrayscale(imgData.data), 
-                        () => rustWrappers.grayscale_image(imgData.data));
+                    for(let i=0; i<WARMUP_ROUNDS; i++) { status.innerText = `Warmup JS: ${test.name}`; await new Promise(r => setTimeout(r, 10)); test.js(); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
+                    for(let i=0; i<MEASURE_ROUNDS; i++) { status.innerText = `Measure JS: ${test.name}`; await new Promise(r => setTimeout(r, 10)); const t0 = performance.now(); test.js(); result.js_samples.push(performance.now() - t0); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
+                    result.js_mem = getMemory(false);
 
-                    // 3. SORT
-                    // Generate ONCE, then Copy for each engine
-                    setStatus("Generating Sort Data...");
-                    const masterSortArr = window.generateRandomArray(conf.sort);
-                    // Create explicit copies for fairness
-                    const jsInputSort = Array.from(new Int32Array(masterSortArr));
-                    const wasmInputSort = new Int32Array(masterSortArr);
-                    
-                    await runTest('Sort', `${(conf.sort/1e6).toFixed(1)}M`, 
-                        () => window.jsMergeSort(jsInputSort), 
-                        () => rustWrappers.sort_array(wasmInputSort));
+                    for(let i=0; i<WARMUP_ROUNDS; i++) { status.innerText = `Warmup Wasm: ${test.name}`; await new Promise(r => setTimeout(r, 10)); test.wasm(); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
+                    for(let i=0; i<MEASURE_ROUNDS; i++) { status.innerText = `Measure Wasm: ${test.name}`; await new Promise(r => setTimeout(r, 10)); const t0 = performance.now(); test.wasm(); result.wasm_samples.push(performance.now() - t0); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
+                    result.wasm_mem = getMemory(true);
 
-                    // 4. K-MEANS
-                    // Generate ONCE
-                    setStatus("Generating K-Means Points...");
-                    const pts = window.generatePoints(conf.kmeans);
-                    await runTest('K-Means', `P=${conf.kmeans}`, 
-                        () => window.jsKMeans(pts, 5, 20), 
-                        () => rustWrappers.k_means_clustering(pts, 5, 20));
+                    result.js_stats = calculateStats(result.js_samples);
+                    result.wasm_stats = calculateStats(result.wasm_samples);
+                    result.speedup = result.js_stats.mean / result.wasm_stats.mean;
 
-                    setStatus(null, false);
-                } catch(e) { 
-                    console.error(e); 
-                    alert("Error: " + e.message); 
-                    setStatus(null, false);
+                    history.push(result);
+                    localStorage.setItem('research_stats_data', JSON.stringify(history));
                 }
-            }, 100);
+                updateUI();
+            } catch(e) { console.error(e); alert("Error: " + e.message); } 
+            finally { overlay.style.display = 'none'; }
         };
 
-        // ==========================================
-        // 5. DATA MANAGEMENT
-        // ==========================================
-        function saveHistory() { localStorage.setItem('research_benchmark_data', JSON.stringify(history)); updateUI(); }
-        window.clearHistory = function() { if(confirm("Delete all historical data?")) { history = []; saveHistory(); } };
-        
+        // --- IMPORT / EXPORT (FIXED) ---
+        window.downloadCSV = function() {
+            if(!history.length) return alert("No data to export");
+            let csv = "Timestamp,Platform,Browser,Test,JS_Mean,JS_StdDev,Wasm_Mean,Wasm_StdDev,Speedup,JS_Mem,Wasm_Mem\n";
+            history.forEach(r => {
+                csv += `${r.timestamp},${r.platform},${r.browser},${r.test},${r.js_stats.mean.toFixed(2)},${r.js_stats.stdDev.toFixed(2)},${r.wasm_stats.mean.toFixed(2)},${r.wasm_stats.stdDev.toFixed(2)},${r.speedup.toFixed(2)},${r.js_mem},${r.wasm_mem}\n`;
+            });
+            const link = document.createElement("a");
+            link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
+            link.download = "rigorous_benchmark_data.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
         window.importCSV = function(input) {
             const file = input.files[0];
             if (!file) return;
@@ -404,126 +355,124 @@
                 try {
                     const lines = e.target.result.split('\n');
                     let count = 0;
+                    // Skip header, parse rows
                     for (let i = 1; i < lines.length; i++) {
-                        const cols = lines[i].split(',');
-                        if (cols.length < 9) continue;
+                        const line = lines[i].trim();
+                        if(!line) continue;
+                        const cols = line.split(',');
+                        if (cols.length < 11) continue;
+
                         const rec = {
-                            timestamp: cols[0], platform: cols[1], browser: cols[2], test: cols[3], params: cols[4],
-                            js_time: parseFloat(cols[5]), wasm_time: parseFloat(cols[6]), speedup: parseFloat(cols[7]),
-                            js_mem: cols[8], wasm_mem: cols[9]
+                            timestamp: cols[0],
+                            platform: cols[1],
+                            browser: cols[2],
+                            test: cols[3],
+                            js_stats: { mean: parseFloat(cols[4]), stdDev: parseFloat(cols[5]), rsd: 0 }, // Reconstruct stats structure
+                            wasm_stats: { mean: parseFloat(cols[6]), stdDev: parseFloat(cols[7]), rsd: 0 },
+                            speedup: parseFloat(cols[8]),
+                            js_mem: cols[9],
+                            wasm_mem: cols[10]
                         };
-                        if (!history.some(h => h.timestamp === rec.timestamp && h.test === rec.test)) { history.push(rec); count++; }
+                        
+                        // Calc RSD for UI stability check
+                        rec.js_stats.rsd = (rec.js_stats.stdDev / rec.js_stats.mean) * 100;
+                        rec.wasm_stats.rsd = (rec.wasm_stats.stdDev / rec.wasm_stats.mean) * 100;
+
+                        // Avoid duplicates
+                        const exists = history.some(h => h.timestamp === rec.timestamp && h.test === rec.test && h.browser === rec.browser);
+                        if (!exists) { history.push(rec); count++; }
                     }
-                    if (count > 0) { saveHistory(); alert(`Merged ${count} records successfully.`); }
-                } catch (err) { alert("Error parsing CSV: " + err.message); }
+                    if (count > 0) {
+                        localStorage.setItem('research_stats_data', JSON.stringify(history));
+                        updateUI();
+                        alert(`Successfully merged ${count} records!`);
+                    } else {
+                        alert("No new records found (duplicates skipped).");
+                    }
+                } catch (err) { alert("Import Error: " + err.message); }
                 input.value = ''; 
             };
             reader.readAsText(file);
         };
 
-        window.downloadMasterCSV = function() {
-            if(history.length === 0) { alert("No data to export."); return; }
-            let csv = "Timestamp,Platform,Browser,Test Name,Parameters,JS Time (ms),Wasm Time (ms),Speedup,JS Mem (MB),Wasm Mem (MB)\n";
-            history.forEach(r => { csv += `${r.timestamp},${r.platform},${r.browser},${r.test},${r.params},${r.js_time},${r.wasm_time},${r.speedup},${r.js_mem},${r.wasm_mem}\n`; });
-            const link = document.createElement("a");
-            link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
-            link.download = "research_master_dataset.csv";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        window.clearData = function() {
+            if(confirm("Clear all data?")) { history = []; localStorage.removeItem('research_stats_data'); updateUI(); }
         };
 
-        // ==========================================
-        // 6. VISUALIZATION
-        // ==========================================
+        // --- UI UPDATES ---
         function updateUI() {
-            const tbody = document.getElementById('table-body');
-            document.getElementById('record-count').textContent = `${history.length} Records`;
+            document.getElementById('total-samples').innerText = history.length;
+            document.getElementById('last-run').innerText = history.length ? new Date().toLocaleTimeString() : "-";
             
-            if (history.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 2rem;">No data yet. Run a test to begin.</td></tr>';
-            } else {
-                tbody.innerHTML = history.slice().reverse().map(r => `
-                    <tr>
-                        <td>
-                            <div><b>${r.browser}</b> <span style="color:#9ca3af; font-size:0.8em">${r.platform}</span></div>
-                        </td>
-                        <td>
-                            <div style="font-weight:600">${r.test}</div>
-                            <div class="tag tag-param">${r.params}</div>
-                        </td>
-                        <td>${r.js_time.toFixed(2)}ms</td>
-                        <td>${r.wasm_time.toFixed(2)}ms</td>
-                        <td>
-                            ${r.speedup > 1 
-                                ? `<span class="tag tag-wasm">Wasm ${r.speedup}x</span>` 
-                                : `<span class="tag tag-js">JS ${(1/r.speedup).toFixed(2)}x</span>`
-                            }
-                        </td>
-                        <td>
-                            <div>JS: ${r.js_mem}</div>
-                            <div class="memory-val">Wasm: ${r.wasm_mem} MB</div>
-                        </td>
-                    </tr>`).join('');
-            }
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = history.slice().reverse().map(r => {
+                const unstable = (r.js_stats.rsd > 5 || r.wasm_stats.rsd > 5);
+                const stabilityTag = unstable 
+                    ? `<span class="warn" title="High Variance">⚠️ Unstable</span>` 
+                    : `<span style="color:var(--success-text)">✓ Stable</span>`;
+                const badgeClass = r.speedup > 1 ? 'speedup-good' : 'speedup-bad';
+
+                return `<tr>
+                    <td><b>${r.test}</b><br><span class="stat-detail">${r.browser} / ${r.platform}</span></td>
+                    <td><div class="metric-val">${r.js_stats.mean.toFixed(2)} ms</div><span class="stat-detail">σ=${r.js_stats.stdDev.toFixed(2)}</span></td>
+                    <td><div class="metric-val">${r.wasm_stats.mean.toFixed(2)} ms</div><span class="stat-detail">σ=${r.wasm_stats.stdDev.toFixed(2)}</span></td>
+                    <td><span class="speedup-badge ${badgeClass}">${r.speedup.toFixed(2)}x</span></td>
+                    <td><span class="stat-detail">JS: ${r.js_mem}<br>Wasm: ${r.wasm_mem} MB</span></td>
+                    <td>${stabilityTag}</td>
+                </tr>`;
+            }).join('');
             updateCharts();
         }
 
-        let charts = {};
         function updateCharts() {
-            if(history.length === 0) return;
-            try {
-                const ctxTime = document.getElementById('timeChart');
-                const ctxSpeed = document.getElementById('speedupChart');
-                
-                // Limit chart to last 10 runs to prevent clutter
-                const recentData = history.slice(-10); 
-                const labels = recentData.map(r => `${r.test.substring(0,3)} (${r.browser})`);
-                const dataJS = recentData.map(r => r.js_time || 0);
-                const dataWasm = recentData.map(r => r.wasm_time || 0);
-                const dataSpeedup = recentData.map(r => (isFinite(r.speedup) ? r.speedup : 0));
-
-                const commonOptions = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { font: { family: 'Inter' } } } },
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: { grid: { color: '#f3f4f6' } }
+            if(!history.length) return;
+            const isDark = document.body.getAttribute('data-theme') === 'davan';
+            const txtColor = isDark ? '#9ca3af' : '#6b7280';
+            const gridColor = isDark ? '#374151' : '#e5e7eb';
+            
+            const labels = history.map(r => r.test.split(' ')[0]);
+            
+            if(charts.time) charts.time.destroy();
+            charts.time = new Chart(document.getElementById('timeChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'JS Mean (ms)', data: history.map(r => r.js_stats.mean), borderColor: '#ef4444', tension: 0.3 },
+                        { label: 'Wasm Mean (ms)', data: history.map(r => r.wasm_stats.mean), borderColor: '#10b981', tension: 0.3 }
+                    ]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: txtColor } } },
+                    scales: { 
+                        y: { type: 'logarithmic', grid: { color: gridColor }, ticks: { color: txtColor } },
+                        x: { grid: { display: false }, ticks: { color: txtColor } }
                     }
-                };
+                }
+            });
 
-                if(charts.time) charts.time.destroy();
-                charts.time = new Chart(ctxTime, {
-                    type: 'line',
-                    data: { 
-                        labels: labels, 
-                        datasets: [
-                            { label: 'JavaScript', data: dataJS, borderColor: COLOR_JS, tension: 0.3, pointRadius: 4 }, 
-                            { label: 'WebAssembly', data: dataWasm, borderColor: COLOR_WASM, tension: 0.3, pointRadius: 4 }
-                        ] 
-                    },
-                    options: { 
-                        ...commonOptions,
-                        scales: { y: { type: 'logarithmic', title: {display: true, text: 'Time (ms)'} } }
+            if(charts.speed) charts.speed.destroy();
+            charts.speed = new Chart(document.getElementById('speedupChart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{ 
+                        label: 'Speedup Factor', 
+                        data: history.map(r => r.speedup), 
+                        backgroundColor: history.map(r => r.speedup > 1 ? '#10b981' : '#ef4444'),
+                        borderRadius: 4
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: txtColor } },
+                        x: { grid: { display: false }, ticks: { color: txtColor } }
                     }
-                });
-
-                if(charts.speed) charts.speed.destroy();
-                charts.speed = new Chart(ctxSpeed, {
-                    type: 'bar',
-                    data: { 
-                        labels: labels, 
-                        datasets: [{ 
-                            label: 'Wasm Speedup Factor', 
-                            data: dataSpeedup, 
-                            backgroundColor: dataSpeedup.map(v => v > 1 ? COLOR_WASM : COLOR_JS),
-                            borderRadius: 4
-                        }] 
-                    },
-                    options: commonOptions
-                });
-            } catch(e) { console.error(e); }
+                }
+            });
         }
     </script>
 </body>

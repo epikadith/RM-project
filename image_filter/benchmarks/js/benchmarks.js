@@ -4,35 +4,32 @@
 
 // --- 1. HELPER: DATA GENERATION ---
 
-// Generate random N x N matrix (Flat Float64Array)
 function generateMatrix(n) {
     const data = new Float64Array(n * n);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 100;
     return data;
 }
 
-// Generate random array of Integers for Sorting
 function generateRandomArray(size) {
     const data = new Int32Array(size);
     for (let i = 0; i < size; i++) data[i] = Math.floor(Math.random() * 100000);
     return data;
 }
 
-// Generate random 2D points for K-Means [x1, y1, x2, y2...]
 function generatePoints(count) {
     const data = new Float64Array(count * 2);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 1000;
     return data;
 }
 
-// Fetch a random image from the web and return ImageData
 async function fetchRealImage(width, height) {
-    // Using picsum.photos for reliable, random, copyright-free images
+    // Use random seed to ensure same image across runs if needed, 
+    // but for now random is fine as we generate new inputs per suite run.
     const url = `https://picsum.photos/${width}/${height}`;
     console.log(`Downloading image from: ${url}...`);
     
     const img = new Image();
-    img.crossOrigin = "Anonymous"; // Crucial for pixel access
+    img.crossOrigin = "Anonymous"; 
     img.src = url;
     
     return new Promise((resolve, reject) => {
@@ -48,7 +45,7 @@ async function fetchRealImage(width, height) {
     });
 }
 
-// --- 2. JS IMPLEMENTATIONS (For Comparison) ---
+// --- 2. JS IMPLEMENTATIONS (Optimized for Fairness) ---
 
 function jsMultiplyMatrix(a, b, n) {
     const res = new Float64Array(n * n);
@@ -62,23 +59,39 @@ function jsMultiplyMatrix(a, b, n) {
     return res;
 }
 
-function jsMergeSort(data) {
-    if (data.length <= 1) return data;
-    const mid = Math.floor(data.length / 2);
-    const left = jsMergeSort(data.slice(0, mid));
-    const right = jsMergeSort(data.slice(mid));
-    
-    let sorted = [], i = 0, j = 0;
+// UPDATED: Works with TypedArrays (Int32Array) to match Wasm's raw memory model
+function jsMergeSort(arr) {
+    // If input is a TypedArray, we need to handle slicing carefully to avoid 
+    // converting to standard Arrays which would be unfair (slow).
+    if (arr.length <= 1) return arr;
+
+    const mid = Math.floor(arr.length / 2);
+    const left = jsMergeSort(arr.slice(0, mid));
+    const right = jsMergeSort(arr.slice(mid));
+
+    return mergeInt32(left, right);
+}
+
+function mergeInt32(left, right) {
+    let i = 0, j = 0, k = 0;
+    const result = new Int32Array(left.length + right.length);
+
     while (i < left.length && j < right.length) {
-        if (left[i] < right[j]) sorted.push(left[i++]);
-        else sorted.push(right[j++]);
+        if (left[i] <= right[j]) {
+            result[k++] = left[i++];
+        } else {
+            result[k++] = right[j++];
+        }
     }
-    return sorted.concat(left.slice(i)).concat(right.slice(j));
+    while (i < left.length) result[k++] = left[i++];
+    while (j < right.length) result[k++] = right[j++];
+    
+    return result;
 }
 
 function jsKMeans(points, k, iterations) {
     const n = points.length / 2;
-    let centroids = points.slice(0, k * 2); // Init centroids
+    let centroids = points.slice(0, k * 2); 
     
     for (let iter = 0; iter < iterations; iter++) {
         let sums = new Float64Array(k * 2);
@@ -105,7 +118,6 @@ function jsKMeans(points, k, iterations) {
     return centroids;
 }
 
-// JS Grayscale (Manual Loop to match Wasm logic)
 function jsGrayscale(rawBytes) {
     const jsResult = new Uint8ClampedArray(rawBytes);
     for(let i=0; i<jsResult.length; i+=4) {
