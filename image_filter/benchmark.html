@@ -3,244 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generalized WASM vs JS Benchmarks</title>
+    <title>Research Benchmark Suite (Final)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #1a1a1a; margin-bottom: 30px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         
-        .control-panel { background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 5px solid #2196f3; margin-bottom: 30px; }
-        .btn-main { background: #2196f3; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; transition: background 0.2s; }
-        .btn-main:hover { background: #1976d2; }
-        .btn-main:disabled { background: #ccc; cursor: wait; }
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        h1 { margin: 0; font-size: 1.8em; color: #2c3e50; }
+        .badge { background: #e9ecef; padding: 5px 12px; border-radius: 15px; font-size: 0.85em; font-weight: bold; color: #555; }
 
-        .results-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        .result-card { border: 1px solid #eee; padding: 20px; border-radius: 8px; background: #fff; position: relative; }
-        .result-card h3 { margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        
-        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; font-family: 'Courier New', monospace; }
-        .stat-label { font-weight: bold; color: #555; }
-        .stat-val { color: #333; }
-        .winner { color: #4caf50; font-weight: bold; }
-        
-        .chart-container { margin-top: 40px; height: 400px; }
-        
-        .memory-tag { font-size: 0.8em; padding: 2px 6px; background: #eee; border-radius: 4px; color: #666; }
+        /* Controls */
+        .config-panel { background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bbdefb; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.8em; font-weight: bold; color: #1565c0; margin-bottom: 5px; }
+        .input-group input, .input-group select { width: 100%; padding: 8px; border: 1px solid #90caf9; border-radius: 4px; font-family: 'Courier New', monospace; }
+
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.95em; flex: 1; }
+        .btn-run { background: #2196f3; color: white; flex: 2; }
+        .btn-run:hover { background: #1976d2; }
+        .btn-run:disabled { background: #b0bec5; cursor: wait; }
+        .btn-csv { background: #4caf50; color: white; }
+        .btn-csv:hover { background: #388e3c; }
+        .btn-import { background: #ff9800; color: white; position: relative; overflow: hidden; }
+        .btn-import:hover { background: #f57c00; }
+        .btn-import input { position: absolute; top: 0; left: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+        .btn-clear { background: #ff5252; color: white; flex: 0.5; }
+        .btn-clear:hover { background: #d32f2f; }
+
+        /* Charts & Table */
+        .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; height: 350px; }
+        .chart-box { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; }
+        .canvas-container { position: relative; flex: 1; min-height: 0; }
+
+        .history-section { margin-top: 40px; }
+        .data-table-container { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; max-height: 400px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: bold; position: sticky; top: 0; }
+        tr:hover { background: #f1f8ff; }
+        .win-wasm { color: #2e7d32; font-weight: bold; }
+        .win-js { color: #c62828; font-weight: bold; }
+        .tag-platform { font-size: 0.75em; padding: 2px 6px; border-radius: 4px; background: #333; color: #fff; margin-right: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔬 Generalized WASM Benchmarks</h1>
-        <p style="text-align:center; color:#666; margin-bottom:20px;">
-            Testing on Real-World, Dynamic Datasets (Time & Space Complexity)
-        </p>
+        <header>
+            <div>
+                <h1>🔬 Research Benchmark Suite</h1>
+                <div style="margin-top:5px; color:#666; font-size:0.9em;">Cross-Browser Data Aggregation & Analysis</div>
+            </div>
+            <div style="text-align: right;">
+                <span class="badge" id="sys-os">Detecting...</span>
+                <span class="badge" id="sys-browser">Detecting...</span>
+            </div>
+        </header>
 
-        <div class="control-panel">
-            <button id="runBtn" class="btn-main" onclick="runAllTests()">RUN ALL 4 GENERALIZED TESTS</button>
-            <p id="status" style="text-align:center; margin-top:10px; font-style:italic; color:#666;"></p>
+        <div class="config-panel">
+            <div class="config-grid">
+                <div class="input-group"><label>Matrix Size (N)</label><input type="number" id="inp-matrix" value="400" step="100"></div>
+                <div class="input-group"><label>Image Resolution</label>
+                    <select id="inp-image">
+                        <option value="3840,2160">4K (3840x2160)</option>
+                        <option value="1920,1080">1080p (1920x1080)</option>
+                        <option value="1280,720">720p (1280x720)</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Sort Array Size</label><input type="number" id="inp-sort" value="1000000" step="500000"></div>
+                <div class="input-group"><label>K-Means (Points)</label><input type="number" id="inp-kmeans" value="50000" step="10000"></div>
+            </div>
+            <div class="btn-row">
+                <button id="runBtn" class="btn btn-run" onclick="runNewTests()">▶ RUN TESTS</button>
+                <button class="btn btn-csv" onclick="downloadMasterCSV()">💾 EXPORT CSV</button>
+                <button class="btn btn-import">📂 IMPORT CSV<input type="file" accept=".csv" onchange="importCSV(this)"></button>
+                <button class="btn btn-clear" onclick="clearHistory()">🗑️ RESET</button>
+            </div>
+            <div id="status" style="text-align: center; margin-top: 10px; font-style: italic; color: #666;">Ready</div>
         </div>
 
-        <div class="results-grid">
-            <div class="result-card" id="card-matrix">
-                <h3>1. Matrix Multiplication (N x N)</h3>
-                <div class="stat-row"><span class="stat-label">Input:</span> <span>400x400 Matrix (Dynamic)</span></div>
-                <div class="stat-row"><span class="stat-label">JS Time:</span> <span class="stat-val" id="matrix-js">-</span></div>
-                <div class="stat-row"><span class="stat-label">WASM Time:</span> <span class="stat-val" id="matrix-wasm">-</span></div>
-                <div class="stat-row"><span class="stat-label">Speedup:</span> <span class="winner" id="matrix-speedup">-</span></div>
-            </div>
-
-            <div class="result-card" id="card-image">
-                <h3>2. Image Processing (Greyscale)</h3>
-                <div class="stat-row"><span class="stat-label">Input:</span> <span>4K Image (External API)</span></div>
-                <div class="stat-row"><span class="stat-label">JS Time:</span> <span class="stat-val" id="image-js">-</span></div>
-                <div class="stat-row"><span class="stat-label">WASM Time:</span> <span class="stat-val" id="image-wasm">-</span></div>
-                <div class="stat-row"><span class="stat-label">Speedup:</span> <span class="winner" id="image-speedup">-</span></div>
-            </div>
-
-            <div class="result-card" id="card-sort">
-                <h3>3. Merge Sort</h3>
-                <div class="stat-row"><span class="stat-label">Input:</span> <span>1 Million Integers</span></div>
-                <div class="stat-row"><span class="stat-label">JS Time:</span> <span class="stat-val" id="sort-js">-</span></div>
-                <div class="stat-row"><span class="stat-label">WASM Time:</span> <span class="stat-val" id="sort-wasm">-</span></div>
-                <div class="stat-row"><span class="stat-label">Speedup:</span> <span class="winner" id="sort-speedup">-</span></div>
-            </div>
-
-            <div class="result-card" id="card-kmeans">
-                <h3>4. K-Means Clustering</h3>
-                <div class="stat-row"><span class="stat-label">Input:</span> <span>50k Points, K=5</span></div>
-                <div class="stat-row"><span class="stat-label">JS Time:</span> <span class="stat-val" id="kmeans-js">-</span></div>
-                <div class="stat-row"><span class="stat-label">WASM Time:</span> <span class="stat-val" id="kmeans-wasm">-</span></div>
-                <div class="stat-row"><span class="stat-label">Speedup:</span> <span class="winner" id="kmeans-speedup">-</span></div>
-            </div>
+        <div class="chart-grid">
+            <div class="chart-box"><h3 style="margin:0 0 10px 0; font-size:1em; color:#555;">⏱️ Execution Time (Log Scale)</h3><div class="canvas-container"><canvas id="timeChart"></canvas></div></div>
+            <div class="chart-box"><h3 style="margin:0 0 10px 0; font-size:1em; color:#555;">🚀 Speedup Factor</h3><div class="canvas-container"><canvas id="speedupChart"></canvas></div></div>
         </div>
 
-        <div class="chart-container">
-            <canvas id="perfChart"></canvas>
+        <div class="history-section">
+            <div class="history-header"><h3>📜 Data History</h3><span class="badge" id="record-count">0 Records</span></div>
+            <div class="data-table-container">
+                <table id="history-table">
+                    <thead><tr><th>Platform/Browser</th><th>Test Case</th><th>Parameters</th><th>JS Time</th><th>Wasm Time</th><th>Speedup</th><th>Memory (MB)</th></tr></thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script src="./benchmarks/js/benchmarks.js"></script>
+    <script src="./cpp_app/cpp_benchmark.js" onerror="console.log('C++ module skipped')"></script>
+
     <script type="module">
-        // --- MEMORY HELPER ---
-        function getMemoryUsage(isWasm = false, wasmModule = null) {
-            if (isWasm && wasmModule && wasmModule.memory) {
-                const bytes = wasmModule.memory.buffer.byteLength;
-                return (bytes / 1024 / 1024).toFixed(2) + " MB (Linear)";
+        let history = JSON.parse(localStorage.getItem('research_benchmark_data')) || [];
+        let rustWrappers = null; 
+        let rustExports = null;
+        let cppModule = null;
+
+        detectSystem();
+        updateUI();
+
+        // ==========================================
+        // 1. ROBUST MEMORY & SYSTEM CHECKER
+        // ==========================================
+        function detectSystem() {
+            const ua = navigator.userAgent;
+            let os = "Unknown";
+            if (ua.includes("Win")) os = "Windows";
+            else if (ua.includes("Mac")) os = "macOS";
+            else if (ua.includes("Linux")) os = "Linux";
+            else if (ua.includes("Android")) os = "Android";
+            else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+
+            // BROWSER DETECTION FIX: Check Edge BEFORE Chrome
+            let browser = "Unknown";
+            if (ua.indexOf("Edg") !== -1) browser = "Edge";
+            else if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+            else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+            else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+
+            document.getElementById('sys-os').textContent = os;
+            document.getElementById('sys-browser').textContent = browser;
+            return { os, browser };
+        }
+
+        function getMemory(isWasm, wasmInstance) {
+            if (!isWasm) {
+                if (window.performance && window.performance.memory) {
+                    return (window.performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+                }
+                return "N/A"; 
             }
-            if (window.performance && window.performance.memory) {
-                const bytes = window.performance.memory.usedJSHeapSize;
-                return (bytes / 1024 / 1024).toFixed(2) + " MB (Heap)";
+            try {
+                if (wasmInstance && wasmInstance.memory && wasmInstance.memory.buffer) {
+                    return (wasmInstance.memory.buffer.byteLength / 1024 / 1024).toFixed(1);
+                }
+                if (wasmInstance && wasmInstance.HEAP8) {
+                    return (wasmInstance.HEAP8.buffer.byteLength / 1024 / 1024).toFixed(1);
+                }
+            } catch(e) { console.error("Mem check failed", e); }
+            return "-";
+        }
+
+        // ==========================================
+        // 2. INIT MODULES
+        // ==========================================
+        async function initModules() {
+            if (!rustWrappers) {
+                const m = await import('./wasm_app/pkg/image_filter_wasm.js');
+                rustWrappers = m;
+                rustExports = await m.default(); 
             }
-            return "N/A";
+            if (!cppModule && window.createCppModule) {
+                try { cppModule = await window.createCppModule(); } catch(e) {}
+            }
         }
 
-        // --- INIT WASM ---
-        let wasm = null;
-        async function init() {
-            if (wasm) return wasm;
-            const module = await import('./wasm_app/pkg/image_filter_wasm.js');
-            await module.default();
-            wasm = module;
-            return wasm;
-        }
-
-        // --- UPDATE UI HELPER ---
-        function updateUI(id, jsTime, wasmTime, jsMem, wasmMem) {
-            document.getElementById(`${id}-js`).innerHTML = `${jsTime.toFixed(2)} ms <span class="memory-tag">${jsMem}</span>`;
-            document.getElementById(`${id}-wasm`).innerHTML = `${wasmTime.toFixed(2)} ms <span class="memory-tag">${wasmMem}</span>`;
-            
-            const speedup = jsTime / wasmTime;
-            const el = document.getElementById(`${id}-speedup`);
-            el.textContent = speedup > 1 ? `${speedup.toFixed(2)}x Faster` : `${(1/speedup).toFixed(2)}x Slower`;
-            el.style.color = speedup > 1 ? '#4caf50' : '#f44336';
-        }
-
-        // --- MAIN RUNNER ---
-        window.runAllTests = async function() {
+        // ==========================================
+        // 3. TEST RUNNER
+        // ==========================================
+        window.runNewTests = async function() {
             const btn = document.getElementById('runBtn');
             const status = document.getElementById('status');
             btn.disabled = true;
-            status.textContent = "Initializing Wasm...";
-            
             try {
-                await init();
-                
-                // 1. MATRIX
-                status.textContent = "Running Matrix Multiplication (400x400)...";
-                await new Promise(r => setTimeout(r, 50)); // Let UI update
-                const N = 400;
-                const matA = window.generateMatrix(N);
-                const matB = window.generateMatrix(N);
-                
-                let t0 = performance.now();
-                window.jsMultiplyMatrix(matA, matB, N);
-                let tJS = performance.now() - t0;
-                let memJS = getMemoryUsage(false);
+                status.textContent = "Initializing...";
+                await initModules();
+                const sys = detectSystem();
+                const conf = {
+                    matrix: parseInt(document.getElementById('inp-matrix').value),
+                    img: document.getElementById('inp-image').value.split(','),
+                    sort: parseInt(document.getElementById('inp-sort').value),
+                    kmeans: parseInt(document.getElementById('inp-kmeans').value)
+                };
 
-                t0 = performance.now();
-                wasm.multiply_matrices_dynamic(matA, matB, N);
-                let tWasm = performance.now() - t0;
-                let memWasm = getMemoryUsage(true, wasm);
-                
-                updateUI('matrix', tJS, tWasm, memJS, memWasm);
+                const runTest = async (name, params, jsFn, wasmFn) => {
+                    let t0 = performance.now();
+                    await jsFn(); 
+                    let tJS = performance.now() - t0;
+                    let mJS = getMemory(false);
 
-                // 2. IMAGE
-                status.textContent = "Running Image Processing (4K Download)...";
-                await new Promise(r => setTimeout(r, 50));
-                const imgData = await window.fetchRealImage(3840, 2160);
-                const rawBytes = imgData.data;
+                    t0 = performance.now();
+                    await wasmFn();
+                    let tWasm = performance.now() - t0;
+                    let mWasm = getMemory(true, rustExports);
+                    
+                    const safeWasm = tWasm === 0 ? 0.01 : tWasm;
+                    const speedup = parseFloat((tJS / safeWasm).toFixed(2));
 
-                t0 = performance.now();
-                window.jsGrayscale(rawBytes);
-                tJS = performance.now() - t0;
-                memJS = getMemoryUsage(false);
+                    history.push({
+                        timestamp: new Date().toISOString(), platform: sys.os, browser: sys.browser,
+                        test: name, params: params, js_time: parseFloat(tJS.toFixed(2)),
+                        wasm_time: parseFloat(tWasm.toFixed(2)), speedup: speedup, js_mem: mJS, wasm_mem: mWasm
+                    });
+                    saveHistory();
+                };
 
-                t0 = performance.now();
-                wasm.grayscale_image(rawBytes);
-                tWasm = performance.now() - t0;
-                memWasm = getMemoryUsage(true, wasm);
+                status.textContent = `Matrix...`;
+                const mA = window.generateMatrix(conf.matrix);
+                const mB = window.generateMatrix(conf.matrix);
+                await runTest('Matrix', `N=${conf.matrix}`, 
+                    () => window.jsMultiplyMatrix(mA, mB, conf.matrix), 
+                    () => rustWrappers.multiply_matrices_dynamic(mA, mB, conf.matrix));
 
-                updateUI('image', tJS, tWasm, memJS, memWasm);
+                status.textContent = `Image...`;
+                const imgData = await window.fetchRealImage(parseInt(conf.img[0]), parseInt(conf.img[1]));
+                await runTest('Image', `${conf.img[0]}x${conf.img[1]}`, 
+                    () => window.jsGrayscale(imgData.data), 
+                    () => rustWrappers.grayscale_image(imgData.data));
 
-                // 3. MERGE SORT
-                status.textContent = "Running Merge Sort (1 Million Items)...";
-                await new Promise(r => setTimeout(r, 50));
-                const sortData = window.generateRandomArray(1000000);
-                const sortJS = new Int32Array(sortData);
-                const sortWasm = new Int32Array(sortData);
+                status.textContent = `Sorting...`;
+                const sortArr = window.generateRandomArray(conf.sort);
+                await runTest('Sort', `${(conf.sort/1e6).toFixed(1)}M`, 
+                    () => window.jsMergeSort(Array.from(new Int32Array(sortArr))), 
+                    () => rustWrappers.sort_array(new Int32Array(sortArr)));
 
-                t0 = performance.now();
-                window.jsMergeSort(Array.from(sortJS));
-                tJS = performance.now() - t0;
-                memJS = getMemoryUsage(false);
+                status.textContent = `K-Means...`;
+                const pts = window.generatePoints(conf.kmeans);
+                await runTest('K-Means', `P=${conf.kmeans}`, 
+                    () => window.jsKMeans(pts, 5, 20), 
+                    () => rustWrappers.k_means_clustering(pts, 5, 20));
 
-                t0 = performance.now();
-                wasm.sort_array(sortWasm);
-                tWasm = performance.now() - t0;
-                memWasm = getMemoryUsage(true, wasm);
-
-                updateUI('sort', tJS, tWasm, memJS, memWasm);
-
-                // 4. K-MEANS
-                status.textContent = "Running K-Means (50k points)...";
-                await new Promise(r => setTimeout(r, 50));
-                const points = window.generatePoints(50000);
-                
-                t0 = performance.now();
-                window.jsKMeans(points, 5, 20);
-                tJS = performance.now() - t0;
-                memJS = getMemoryUsage(false);
-
-                t0 = performance.now();
-                wasm.k_means_clustering(points, 5, 20);
-                tWasm = performance.now() - t0;
-                memWasm = getMemoryUsage(true, wasm);
-
-                updateUI('kmeans', tJS, tWasm, memJS, memWasm);
-
-                // Update Chart
-                updateChart();
-                status.textContent = "All Tests Complete!";
-                btn.disabled = false;
-
-            } catch (e) {
-                console.error(e);
-                status.textContent = "Error: " + e.message;
-                btn.disabled = false;
-            }
+                status.textContent = "✅ Done!";
+            } catch(e) { console.error(e); status.textContent = "Error: " + e.message; }
+            btn.disabled = false;
         };
 
-        // --- CHART ---
-        let myChart = null;
-        function updateChart() {
-            const ctx = document.getElementById('perfChart');
-            
-            const getData = (id) => parseFloat(document.getElementById(`${id}-wasm`).textContent);
-            const getJSData = (id) => parseFloat(document.getElementById(`${id}-js`).textContent);
+        // ==========================================
+        // 4. UTILS (IMPORT/EXPORT)
+        // ==========================================
+        function saveHistory() { localStorage.setItem('research_benchmark_data', JSON.stringify(history)); updateUI(); }
+        window.clearHistory = function() { if(confirm("Clear?")) { history = []; saveHistory(); } };
+        
+        window.importCSV = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const lines = e.target.result.split('\n');
+                    let count = 0;
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',');
+                        if (cols.length < 9) continue;
+                        const rec = {
+                            timestamp: cols[0], platform: cols[1], browser: cols[2], test: cols[3], params: cols[4],
+                            js_time: parseFloat(cols[5]), wasm_time: parseFloat(cols[6]), speedup: parseFloat(cols[7]),
+                            js_mem: cols[8], wasm_mem: cols[9]
+                        };
+                        if (!history.some(h => h.timestamp === rec.timestamp && h.test === rec.test)) { history.push(rec); count++; }
+                    }
+                    if (count > 0) { saveHistory(); alert(`Merged ${count} records!`); }
+                } catch (err) { alert("Error: " + err.message); }
+                input.value = ''; 
+            };
+            reader.readAsText(file);
+        };
 
-            const labels = ['Matrix', 'Image', 'Sort', 'K-Means'];
-            const wasmData = [getData('matrix'), getData('image'), getData('sort'), getData('kmeans')];
-            const jsData = [getJSData('matrix'), getJSData('image'), getJSData('sort'), getJSData('kmeans')];
+        window.downloadMasterCSV = function() {
+            if(history.length === 0) { alert("No data!"); return; }
+            let csv = "Timestamp,Platform,Browser,Test Name,Parameters,JS Time (ms),Wasm Time (ms),Speedup,JS Mem (MB),Wasm Mem (MB)\n";
+            history.forEach(r => { csv += `${r.timestamp},${r.platform},${r.browser},${r.test},${r.params},${r.js_time},${r.wasm_time},${r.speedup},${r.js_mem},${r.wasm_mem}\n`; });
+            const link = document.createElement("a");
+            link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
+            link.download = "research_master_dataset.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
 
-            if (myChart) myChart.destroy();
+        function updateUI() {
+            const tbody = document.getElementById('table-body');
+            document.getElementById('record-count').textContent = `${history.length} Records`;
+            tbody.innerHTML = history.slice().reverse().map(r => `
+                <tr>
+                    <td><span class="tag-platform">${r.platform}</span><b>${r.browser}</b></td>
+                    <td>${r.test}</td>
+                    <td style="font-family:monospace; font-size:0.9em; color:#666;">${r.params}</td>
+                    <td>${r.js_time}</td>
+                    <td>${r.wasm_time}</td>
+                    <td class="${r.speedup > 1 ? 'win-wasm' : 'win-js'}">${r.speedup}x</td>
+                    <td style="font-size:0.85em;">${r.js_mem} / ${r.wasm_mem}</td>
+                </tr>`).join('');
+            updateCharts();
+        }
 
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'JavaScript (ms)', data: jsData, backgroundColor: '#2196f3' },
-                        { label: 'WASM (ms)', data: wasmData, backgroundColor: '#4caf50' }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { type: 'logarithmic', title: { display: true, text: 'Time (ms) - Log Scale' } } }
-                }
-            });
+        let charts = {};
+        function updateCharts() {
+            if(history.length === 0) return;
+            try {
+                const ctxTime = document.getElementById('timeChart');
+                const ctxSpeed = document.getElementById('speedupChart');
+                const labels = history.map(r => `${r.test.substring(0,4)} (${r.browser})`);
+                const dataJS = history.map(r => r.js_time || 0);
+                const dataWasm = history.map(r => r.wasm_time || 0);
+                const dataSpeedup = history.map(r => (isFinite(r.speedup) ? r.speedup : 0));
+
+                if(charts.time) charts.time.destroy();
+                charts.time = new Chart(ctxTime, {
+                    type: 'line',
+                    data: { labels: labels, datasets: [{ label: 'JS (ms)', data: dataJS, borderColor: '#2196f3' }, { label: 'Wasm (ms)', data: dataWasm, borderColor: '#4caf50' }] },
+                    options: { scales: { y: { type: 'logarithmic' } }, maintainAspectRatio: false, responsive: true }
+                });
+
+                if(charts.speed) charts.speed.destroy();
+                charts.speed = new Chart(ctxSpeed, {
+                    type: 'bar',
+                    data: { labels: labels, datasets: [{ label: 'Speedup (x)', data: dataSpeedup, backgroundColor: dataSpeedup.map(v => v > 1 ? '#4caf50' : '#ff5252') }] },
+                    options: { maintainAspectRatio: false, responsive: true }
+                });
+            } catch(e) {}
         }
     </script>
 </body>
-</html>
