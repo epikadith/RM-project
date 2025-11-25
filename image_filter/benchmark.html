@@ -167,7 +167,7 @@
             <div class="info-box">
                 <i class="fa-solid fa-circle-info" style="margin-top: 3px;"></i>
                 <div>
-                    <strong>Research Note:</strong> WebAssembly uses Linear Memory. If you see memory stay static at 68.2MB, it is due to the "High-Water Mark" behavior (the browser reserves the peak capacity needed and does not shrink it). Use the 5K Image setting to force new allocation.
+                    <strong>Research Note:</strong> WebAssembly uses Linear Memory. If you see memory stay static (e.g. 68.2MB), it is due to the "High-Water Mark" behavior (the browser reserves the peak capacity needed and does not shrink it). Use the 5K Image setting to force new allocation.
                 </div>
             </div>
 
@@ -210,7 +210,7 @@
     <div id="status-overlay">
         <div class="spinner"></div>
         <h3 id="status-text">Initializing Wasm Module...</h3>
-        <p style="color: #666">Please wait, running heavy computations.</p>
+        <p style="color: #666">Running rigorous benchmark suite...</p>
     </div>
 
     <script src="./benchmarks/js/benchmarks.js"></script>
@@ -255,7 +255,6 @@
             document.getElementById('sys-os').innerHTML = os;
             document.getElementById('sys-browser').innerHTML = browser;
             
-            // Update icons dynamically
             const bIcon = document.querySelector('.sys-badge .fa-chrome'); 
             if(bIcon) bIcon.className = `fa-brands ${icon}`;
 
@@ -302,12 +301,11 @@
         }
 
         // ==========================================
-        // 4. RUNNER LOGIC
+        // 4. RUNNER LOGIC (Strictly Fair Inputs)
         // ==========================================
         window.runNewTests = async function() {
             setStatus("Initializing Engines...", true);
             
-            // Use setTimeout to allow UI to render the loading spinner
             setTimeout(async () => {
                 try {
                     await initModules();
@@ -319,6 +317,7 @@
                         kmeans: parseInt(document.getElementById('inp-kmeans').value)
                     };
 
+                    // Helper to run one test with explicit pre-generated inputs
                     const runTest = async (name, params, jsFn, wasmFn) => {
                         setStatus(`Running ${name}...`);
                         
@@ -345,31 +344,38 @@
                         saveHistory();
                     };
 
-                    // Execution Chain
-                    setStatus("Processing Matrix...");
-                    await new Promise(r => setTimeout(r, 100)); // UI Breath
+                    // 1. MATRIX
+                    // Generate inputs ONCE
+                    setStatus("Generating Matrix Data...");
                     const mA = window.generateMatrix(conf.matrix);
                     const mB = window.generateMatrix(conf.matrix);
                     await runTest('Matrix', `N=${conf.matrix}`, 
                         () => window.jsMultiplyMatrix(mA, mB, conf.matrix), 
                         () => rustWrappers.multiply_matrices_dynamic(mA, mB, conf.matrix));
 
-                    setStatus("Processing Image...");
-                    await new Promise(r => setTimeout(r, 100));
+                    // 2. IMAGE
+                    // Fetch ONCE
+                    setStatus("Downloading Image...");
                     const imgData = await window.fetchRealImage(parseInt(conf.img[0]), parseInt(conf.img[1]));
                     await runTest('Image', `${conf.img[0]}x${conf.img[1]}`, 
                         () => window.jsGrayscale(imgData.data), 
                         () => rustWrappers.grayscale_image(imgData.data));
 
-                    setStatus("Processing Sort...");
-                    await new Promise(r => setTimeout(r, 100));
-                    const sortArr = window.generateRandomArray(conf.sort);
+                    // 3. SORT
+                    // Generate ONCE, then Copy for each engine
+                    setStatus("Generating Sort Data...");
+                    const masterSortArr = window.generateRandomArray(conf.sort);
+                    // Create explicit copies for fairness
+                    const jsInputSort = Array.from(new Int32Array(masterSortArr));
+                    const wasmInputSort = new Int32Array(masterSortArr);
+                    
                     await runTest('Sort', `${(conf.sort/1e6).toFixed(1)}M`, 
-                        () => window.jsMergeSort(Array.from(new Int32Array(sortArr))), 
-                        () => rustWrappers.sort_array(new Int32Array(sortArr)));
+                        () => window.jsMergeSort(jsInputSort), 
+                        () => rustWrappers.sort_array(wasmInputSort));
 
-                    setStatus("Processing K-Means...");
-                    await new Promise(r => setTimeout(r, 100));
+                    // 4. K-MEANS
+                    // Generate ONCE
+                    setStatus("Generating K-Means Points...");
                     const pts = window.generatePoints(conf.kmeans);
                     await runTest('K-Means', `P=${conf.kmeans}`, 
                         () => window.jsKMeans(pts, 5, 20), 
@@ -435,7 +441,7 @@
             document.getElementById('record-count').textContent = `${history.length} Records`;
             
             if (history.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">No data yet. Run a test to begin.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding: 2rem;">No data yet. Run a test to begin.</td></tr>';
             } else {
                 tbody.innerHTML = history.slice().reverse().map(r => `
                     <tr>
