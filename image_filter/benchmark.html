@@ -248,9 +248,7 @@
         // --- MEMORY ---
         function getMemory(isWasm) {
             if (!isWasm) {
-                return (window.performance && window.performance.memory) 
-                    ? (window.performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) 
-                    : "N/A";
+                return (window.performance && window.performance.memory) ? (window.performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) : "N/A";
             }
             try {
                 if (rustExports && rustExports.memory) return (rustExports.memory.buffer.byteLength / 1024 / 1024).toFixed(1);
@@ -258,7 +256,7 @@
             return "-";
         }
 
-        // --- STATISTICS ---
+        // --- STATS ---
         function calculateStats(times) {
             const n = times.length;
             const mean = times.reduce((a, b) => a + b, 0) / n;
@@ -281,7 +279,6 @@
             const overlay = document.getElementById('overlay');
             const status = document.getElementById('status-text');
             const prog = document.getElementById('progress-fill');
-            
             overlay.style.display = 'flex';
             
             try {
@@ -315,36 +312,12 @@
                 for (const test of tests) {
                     const result = { test: test.name, platform: sys.os, browser: sys.browser, timestamp: new Date().toISOString(), js_samples: [], wasm_samples: [] };
 
-                    for(let i=0; i<WARMUP_ROUNDS; i++) {
-                        status.innerText = `Warmup JS: ${test.name} (${i+1}/${WARMUP_ROUNDS})`;
-                        await new Promise(r => setTimeout(r, 10));
-                        test.js();
-                        step++; prog.style.width = `${(step/totalSteps)*100}%`;
-                    }
-                    for(let i=0; i<MEASURE_ROUNDS; i++) {
-                        status.innerText = `Measure JS: ${test.name} (${i+1}/${MEASURE_ROUNDS})`;
-                        await new Promise(r => setTimeout(r, 10));
-                        const t0 = performance.now();
-                        test.js();
-                        result.js_samples.push(performance.now() - t0);
-                        step++; prog.style.width = `${(step/totalSteps)*100}%`;
-                    }
+                    for(let i=0; i<WARMUP_ROUNDS; i++) { status.innerText = `Warmup JS: ${test.name}`; await new Promise(r => setTimeout(r, 10)); test.js(); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
+                    for(let i=0; i<MEASURE_ROUNDS; i++) { status.innerText = `Measure JS: ${test.name}`; await new Promise(r => setTimeout(r, 10)); const t0 = performance.now(); test.js(); result.js_samples.push(performance.now() - t0); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
                     result.js_mem = getMemory(false);
 
-                    for(let i=0; i<WARMUP_ROUNDS; i++) {
-                        status.innerText = `Warmup Wasm: ${test.name} (${i+1}/${WARMUP_ROUNDS})`;
-                        await new Promise(r => setTimeout(r, 10));
-                        test.wasm();
-                        step++; prog.style.width = `${(step/totalSteps)*100}%`;
-                    }
-                    for(let i=0; i<MEASURE_ROUNDS; i++) {
-                        status.innerText = `Measure Wasm: ${test.name} (${i+1}/${MEASURE_ROUNDS})`;
-                        await new Promise(r => setTimeout(r, 10));
-                        const t0 = performance.now();
-                        test.wasm();
-                        result.wasm_samples.push(performance.now() - t0);
-                        step++; prog.style.width = `${(step/totalSteps)*100}%`;
-                    }
+                    for(let i=0; i<WARMUP_ROUNDS; i++) { status.innerText = `Warmup Wasm: ${test.name}`; await new Promise(r => setTimeout(r, 10)); test.wasm(); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
+                    for(let i=0; i<MEASURE_ROUNDS; i++) { status.innerText = `Measure Wasm: ${test.name}`; await new Promise(r => setTimeout(r, 10)); const t0 = performance.now(); test.wasm(); result.wasm_samples.push(performance.now() - t0); step++; prog.style.width = `${(step/totalSteps)*100}%`; }
                     result.wasm_mem = getMemory(true);
 
                     result.js_stats = calculateStats(result.js_samples);
@@ -359,7 +332,7 @@
             finally { overlay.style.display = 'none'; }
         };
 
-        // --- IMPORT / EXPORT ---
+        // --- IMPORT / EXPORT (FIXED) ---
         window.downloadCSV = function() {
             if(!history.length) return alert("No data to export");
             let csv = "Timestamp,Platform,Browser,Test,JS_Mean,JS_StdDev,Wasm_Mean,Wasm_StdDev,Speedup,JS_Mem,Wasm_Mem\n";
