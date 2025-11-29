@@ -5,13 +5,11 @@
   "files": [
     "image_filter_wasm_bg.wasm",
     "image_filter_wasm.js",
-    "image_filter_wasm_bg.js",
     "image_filter_wasm.d.ts"
   ],
   "main": "image_filter_wasm.js",
   "types": "image_filter_wasm.d.ts",
   "sideEffects": [
-    "./image_filter_wasm.js",
     "./snippets/*"
   ]
 }
